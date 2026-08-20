@@ -1,0 +1,540 @@
+-- LocalScript: Поместите в StarterGui (рекомендуется) или StarterPlayerScripts
+-- Если в StarterPlayerScripts, скрипт автоматически поместит GUI в PlayerGui
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+if not player then
+    warn("LocalPlayer не найден")
+    return
+end
+
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Создаём ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BulidABoatCyberHub"
+screenGui.ResetOnSpawn = false
+screenGui.Enabled = true
+screenGui.Parent = playerGui
+
+-- Основной фрейм (тёмно-серый, острые углы)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Parent = screenGui
+
+-- Верхняя панель (для перетаскивания)
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Size = UDim2.new(1, 0, 0, 30)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, -10, 1, 0)
+titleLabel.Position = UDim2.new(0, 5, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "BulidABoatCyberHub"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 16
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+-- Перетаскивание всей панели за верхнюю панель
+local dragSupported = pcall(function()
+    local dragDetector = Instance.new("UIDragDetector")
+    dragDetector.ResponseStyle = Enum.ResponseStyle.Drag
+    dragDetector.Target = mainFrame
+    dragDetector.Parent = topBar
+end)
+
+if not dragSupported then
+    -- Ручное перетаскивание через мышь
+    local dragging = false
+    local dragOffset = Vector2.new(0, 0)
+
+    topBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            local mousePos = UserInputService:GetMouseLocation()
+            dragOffset = Vector2.new(mousePos.X - mainFrame.AbsolutePosition.X, mousePos.Y - mainFrame.AbsolutePosition.Y)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local mousePos = UserInputService:GetMouseLocation()
+            mainFrame.Position = UDim2.new(0, mousePos.X - dragOffset.X, 0, mousePos.Y - dragOffset.Y)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+-- Контейнер для функций (прокручиваемый список)
+local featureContainer = Instance.new("Frame")
+featureContainer.Name = "FeatureContainer"
+featureContainer.Size = UDim2.new(1, 0, 1, -60)
+featureContainer.Position = UDim2.new(0, 0, 0, 30)
+featureContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+featureContainer.BorderSizePixel = 0
+featureContainer.Parent = mainFrame
+
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Name = "ScrollingFrame"
+scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+scrollingFrame.Position = UDim2.new(0, 0, 0, 0)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.ScrollBarThickness = 4
+scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+scrollingFrame.ScrollingEnabled = true
+scrollingFrame.Parent = featureContainer
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Padding = UDim.new(0, 10)
+uiListLayout.Parent = scrollingFrame
+
+-- ==================== РЕЕСТР ВСЕХ ФУНКЦИЙ ====================
+local allFeatures = {}
+
+-- Функция создания строки функции
+local function CreateFeatureRow(parent, name, description, initialValue, onToggle)
+    local row = Instance.new("Frame")
+    row.Name = name
+    row.Size = UDim2.new(1, -20, 0, 80)
+    row.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    row.BorderSizePixel = 0
+    row.Parent = parent
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -60, 0, 20)
+    nameLabel.Position = UDim2.new(0, 10, 0, 5)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = row
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -60, 0, 40)
+    descLabel.Position = UDim2.new(0, 10, 0, 30)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = description
+    descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextSize = 12
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextWrapped = true
+    descLabel.Parent = row
+
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "Toggle"
+    toggleFrame.Size = UDim2.new(0, 50, 0, 24)
+    toggleFrame.Position = UDim2.new(1, -60, 0, 10)
+    toggleFrame.BackgroundColor3 = initialValue and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(80, 80, 80)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = row
+
+    local knob = Instance.new("Frame")
+    knob.Name = "Knob"
+    knob.Size = UDim2.new(0, 20, 0, 20)
+    knob.Position = initialValue and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel = 0
+    knob.Parent = toggleFrame
+
+    local stateLabel = Instance.new("TextLabel")
+    stateLabel.Size = UDim2.new(1, 0, 1, 0)
+    stateLabel.BackgroundTransparency = 1
+    stateLabel.Text = initialValue and "ON" or "OFF"
+    stateLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    stateLabel.Font = Enum.Font.GothamBold
+    stateLabel.TextSize = 10
+    stateLabel.TextXAlignment = Enum.TextXAlignment.Center
+    stateLabel.TextYAlignment = Enum.TextYAlignment.Center
+    stateLabel.Parent = knob
+
+    local isOn = initialValue
+
+    local function updateVisual()
+        toggleFrame.BackgroundColor3 = isOn and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(80, 80, 80)
+        knob.Position = isOn and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
+        stateLabel.Text = isOn and "ON" or "OFF"
+    end
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(1, 0, 1, 0)
+    toggleButton.BackgroundTransparency = 1
+    toggleButton.Text = ""
+    toggleButton.Parent = toggleFrame
+    toggleButton.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        updateVisual()
+        if onToggle then
+            onToggle(isOn)
+        end
+    end)
+
+    local featureObj = {
+        SetValue = function(value)
+            isOn = value
+            updateVisual()
+            if onToggle then
+                onToggle(isOn)
+            end
+        end,
+        GetValue = function()
+            return isOn
+        end,
+        Row = row,
+        Name = name,
+        onToggle = onToggle
+    }
+
+    table.insert(allFeatures, featureObj)
+    return featureObj
+end
+
+-- Пример функции (для теста)
+local testFeature = CreateFeatureRow(
+    scrollingFrame,
+    "Test Function",
+    "This is a test function to demonstrate the toggle. Turning it on will print a message.",
+    false,
+    function(value)
+        if value then
+            print("Test function enabled")
+        else
+            print("Test function disabled")
+        end
+    end
+)
+
+-- ==================== ПОЛЁТ (FLY) ====================
+local flyEnabled = false
+local flyVelocity = nil
+local flyGyro = nil
+local flyHeartbeat = nil
+
+local FLY_SPEED = 50
+
+local function startFly()
+    -- Если полёт уже активен и объекты живы, ничего не делаем
+    if flyEnabled and flyVelocity and flyGyro and flyVelocity.Parent and flyGyro.Parent then
+        return
+    end
+
+    -- Очищаем предыдущее состояние (на случай, если персонаж умер)
+    stopFly()
+
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+
+    flyVelocity = Instance.new("BodyVelocity")
+    flyVelocity.Name = "FlyVelocity"
+    flyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    flyVelocity.Velocity = Vector3.zero
+    flyVelocity.Parent = rootPart
+
+    flyGyro = Instance.new("BodyGyro")
+    flyGyro.Name = "FlyGyro"
+    flyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    flyGyro.D = 100
+    flyGyro.P = 9000
+    flyGyro.CFrame = rootPart.CFrame
+    flyGyro.Parent = rootPart
+
+    flyEnabled = true
+
+    flyHeartbeat = RunService.Heartbeat:Connect(function()
+        if not flyEnabled or not flyVelocity or not flyGyro or not rootPart or not humanoid then
+            return
+        end
+
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+
+        local moveVector = Vector3.zero
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveVector = moveVector + camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveVector = moveVector - camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveVector = moveVector - camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveVector = moveVector + camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveVector = moveVector + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+            moveVector = moveVector - Vector3.new(0, 1, 0)
+        end
+
+        if moveVector.Magnitude > 0 then
+            moveVector = moveVector.Unit * FLY_SPEED
+            flyVelocity.Velocity = moveVector
+        else
+            flyVelocity.Velocity = Vector3.zero
+        end
+
+        flyGyro.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + camera.CFrame.LookVector)
+    end)
+end
+
+local function stopFly()
+    flyEnabled = false
+    if flyHeartbeat then
+        flyHeartbeat:Disconnect()
+        flyHeartbeat = nil
+    end
+    if flyVelocity then
+        flyVelocity:Destroy()
+        flyVelocity = nil
+    end
+    if flyGyro then
+        flyGyro:Destroy()
+        flyGyro = nil
+    end
+end
+
+local flyFeature = CreateFeatureRow(
+    scrollingFrame,
+    "Fly",
+    "Allows the player to fly. Controlled with WASD, Space, Shift.",
+    false,
+    function(value)
+        if value then
+            startFly()
+        else
+            stopFly()
+        end
+    end
+)
+
+-- ==================== ЗАМОРОЗКА ПЕРСОНАЖА ====================
+local function freezeCharacter(character)
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not rootPart then return end
+
+    -- Останавливаем текущий полёт, если он активен
+    stopFly()
+
+    -- Замораживаем: запрещаем движение, прыжки, падение
+    humanoid.PlatformStand = true
+    humanoid.WalkSpeed = 0
+    humanoid.JumpPower = 0
+    humanoid.AutoRotate = false
+    rootPart.Anchored = true  -- Гарантированно предотвращает падение
+end
+
+local function unfreezeCharacter(character)
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid then return end
+
+    -- Возвращаем стандартные значения (можно подстроить под игру)
+    humanoid.PlatformStand = false
+    humanoid.WalkSpeed = 16 -- Стандартная скорость ходьбы (можно изменить)
+    humanoid.JumpPower = 50 -- Стандартная сила прыжка (можно изменить)
+    humanoid.AutoRotate = true
+    if rootPart then
+        rootPart.Anchored = false
+    end
+end
+
+-- ==================== АВТОФАРМ ====================
+local autoFarmEnabled = false
+local autoFarmCoroutine = nil
+
+local teleportTargets = {
+    workspace.BoatStages.NormalStages.CaveStage1.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage2.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage3.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage4.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage5.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage6.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage7.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage8.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage9.DarknessPart,
+    workspace.BoatStages.NormalStages.CaveStage10.DarknessPart,
+    workspace.BoatStages.NormalStages.TheEnd.GoldenChest.Trigger
+}
+
+local function startAutoFarm()
+    if autoFarmCoroutine and coroutine.status(autoFarmCoroutine) ~= "dead" then
+        -- Если корутина уже работает, просто ставим флаг и выходим
+        autoFarmEnabled = true
+        return
+    end
+
+    autoFarmEnabled = true
+    autoFarmCoroutine = coroutine.create(function()
+        while autoFarmEnabled do
+            -- Ждём появления персонажа
+            local character = player.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then
+                player.CharacterAdded:Wait()
+                character = player.Character
+                if not character then continue end
+            end
+
+            local humanoid = character:WaitForChild("Humanoid")
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+
+            -- Замораживаем персонажа (отключаем полёт и движение, предотвращаем падение)
+            freezeCharacter(character)
+
+            -- Телепортируемся по всем целям
+            for i, target in ipairs(teleportTargets) do
+                if not autoFarmEnabled then break end
+                if target and target:IsA("BasePart") then
+                    rootPart.CFrame = target.CFrame * CFrame.new(0, 3, 0)
+                end
+                -- Ждём 2 секунды на каждой точке, кроме последней
+                if i < #teleportTargets then
+                    local waitTime = 0
+                    while waitTime < 2 and autoFarmEnabled do
+                        task.wait(0.1)
+                        waitTime += 0.1
+                    end
+                end
+            end
+
+            -- Ожидание 45 секунд перед следующим циклом
+            if autoFarmEnabled then
+                local waitTime = 0
+                while waitTime < 45 and autoFarmEnabled do
+                    task.wait(1)
+                    waitTime += 1
+                end
+            end
+
+            -- Размораживаем перед возможным повторным циклом (если не выключен)
+            if autoFarmEnabled then
+                unfreezeCharacter(character)
+            end
+        end
+    end)
+    coroutine.resume(autoFarmCoroutine)
+end
+
+local function stopAutoFarm()
+    autoFarmEnabled = false
+    if autoFarmCoroutine then
+        coroutine.close(autoFarmCoroutine)
+        autoFarmCoroutine = nil
+    end
+
+    -- Размораживаем текущего персонажа, если он есть
+    local character = player.Character
+    if character then
+        unfreezeCharacter(character)
+    end
+end
+
+local autoFarmFeature = CreateFeatureRow(
+    scrollingFrame,
+    "Auto Farm",
+    "Teleports through all CaveStage DarknessParts, waits 2s at each, then waits 45s and repeats. Restarts after death.",
+    false,
+    function(value)
+        if value then
+            startAutoFarm()
+        else
+            stopAutoFarm()
+        end
+    end
+)
+
+-- ==================== КНОПКА DESTROY ====================
+local destroyButton = Instance.new("TextButton")
+destroyButton.Name = "DestroyGUI"
+destroyButton.Size = UDim2.new(1, -20, 0, 30)
+destroyButton.Position = UDim2.new(0, 10, 1, -40)
+destroyButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+destroyButton.BorderSizePixel = 0
+destroyButton.Text = "DestroyGUI"
+destroyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+destroyButton.Font = Enum.Font.GothamBold
+destroyButton.TextSize = 14
+destroyButton.Parent = mainFrame
+
+-- Переключение видимости по клавише Insert
+local guiVisible = true
+local inputConnection
+
+inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        guiVisible = not guiVisible
+        screenGui.Enabled = guiVisible
+    end
+end)
+
+destroyButton.MouseButton1Click:Connect(function()
+    stopAutoFarm() -- Разморозит персонажа
+    stopFly()      -- Остановит полёт, если он был активен
+    if inputConnection then
+        inputConnection:Disconnect()
+    end
+    screenGui:Destroy()
+end)
+
+-- ==================== АВТОВОССТАНОВЛЕНИЕ ПОСЛЕ СМЕРТИ ====================
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.2)
+    for _, feature in ipairs(allFeatures) do
+        if feature.GetValue() and feature.onToggle then
+            pcall(feature.onToggle, true)
+        end
+    end
+end)
+
+-- ==================== ТАЙМЕР ПЕРЕЗАПУСКА КАЖДЫЕ 45 СЕКУНД ====================
+task.spawn(function()
+    while true do
+        task.wait(45)
+        for _, feature in ipairs(allFeatures) do
+            if feature.GetValue() and feature.onToggle then
+                pcall(feature.onToggle, true)
+            end
+        end
+    end
+end)
+
+print("BulidABoatCyberHub меню загружено.")
