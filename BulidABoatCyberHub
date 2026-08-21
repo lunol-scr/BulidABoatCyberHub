@@ -28,6 +28,7 @@ mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
+mainFrame.Visible = true
 mainFrame.Parent = screenGui
 
 -- Верхняя панель (перетаскивание)
@@ -39,9 +40,10 @@ topBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 topBar.BorderSizePixel = 0
 topBar.Parent = mainFrame
 
+-- Заголовок (слева)
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -10, 1, 0)
+titleLabel.Size = UDim2.new(1, -70, 1, 0) -- оставляем место под кнопки справа
 titleLabel.Position = UDim2.new(0, 5, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "BulidABoatCyberHub"
@@ -51,7 +53,7 @@ titleLabel.TextSize = 16
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = topBar
 
--- Перетаскивание
+-- Перетаскивание за верхнюю панель (только за пустую область)
 local dragSupported = pcall(function()
     local dragDetector = Instance.new("UIDragDetector")
     dragDetector.ResponseStyle = Enum.ResponseStyle.Drag
@@ -85,6 +87,46 @@ if not dragSupported then
     end)
 end
 
+-- Кнопка "минус" (свернуть)
+local btnMinimize = Instance.new("TextButton")
+btnMinimize.Name = "MinimizeButton"
+btnMinimize.Size = UDim2.new(0, 30, 0, 30)
+btnMinimize.Position = UDim2.new(1, -70, 0, 0) -- справа, левее крестика
+btnMinimize.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+btnMinimize.BorderSizePixel = 0
+btnMinimize.Text = "-"
+btnMinimize.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnMinimize.Font = Enum.Font.GothamBold
+btnMinimize.TextSize = 16
+btnMinimize.Parent = mainFrame
+
+-- Кнопка "крестик" (уничтожить)
+local btnClose = Instance.new("TextButton")
+btnClose.Name = "CloseButton"
+btnClose.Size = UDim2.new(0, 30, 0, 30)
+btnClose.Position = UDim2.new(1, -35, 0, 0) -- правый верхний угол
+btnClose.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+btnClose.BorderSizePixel = 0
+btnClose.Text = "X"
+btnClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnClose.Font = Enum.Font.GothamBold
+btnClose.TextSize = 16
+btnClose.Parent = mainFrame
+
+-- Плавающая кнопка (появляется после сворачивания)
+local floatingButton = Instance.new("TextButton")
+floatingButton.Name = "FloatingButton"
+floatingButton.Size = UDim2.new(0, 200, 0, 40)
+floatingButton.Position = UDim2.new(0.5, -100, 0, 10) -- сверху по центру
+floatingButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+floatingButton.BorderSizePixel = 0
+floatingButton.Text = "BulidABoatCyberHub"
+floatingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+floatingButton.Font = Enum.Font.GothamBold
+floatingButton.TextSize = 16
+floatingButton.Visible = false
+floatingButton.Parent = screenGui
+
 -- Контейнер функций
 local featureContainer = Instance.new("Frame")
 featureContainer.Name = "FeatureContainer"
@@ -116,7 +158,7 @@ uiListLayout.Parent = scrollingFrame
 -- Реестр функций
 local allFeatures = {}
 
--- Создание строки функции
+-- Функция создания строки функции
 local function CreateFeatureRow(parent, name, description, initialValue, onToggle)
     local row = Instance.new("Frame")
     row.Name = name
@@ -338,7 +380,7 @@ local flyFeature = CreateFeatureRow(
     end
 )
 
--- Заморозка персонажа
+-- Заморозка/разморозка
 local function freezeCharacter(character)
     if not character then return end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -346,7 +388,6 @@ local function freezeCharacter(character)
     if not humanoid or not rootPart then return end
 
     stopFly()
-
     humanoid.PlatformStand = true
     humanoid.WalkSpeed = 0
     humanoid.JumpPower = 0
@@ -406,13 +447,20 @@ local function startAutoFarm()
             local humanoid = character:WaitForChild("Humanoid")
             local rootPart = character:WaitForChild("HumanoidRootPart")
 
+            -- Замораживаем персонажа перед телепортациями
             freezeCharacter(character)
 
+            -- Проходим все точки
             for i, target in ipairs(teleportTargets) do
                 if not autoFarmEnabled then break end
                 if target and target:IsA("BasePart") then
+                    -- Если это последняя точка (сундук), размораживаем персонажа
+                    if i == #teleportTargets then
+                        unfreezeCharacter(character)
+                    end
                     rootPart.CFrame = target.CFrame * CFrame.new(0, 3, 0)
                 end
+                -- Ждём 2 секунды на каждой точке, кроме последней
                 if i < #teleportTargets then
                     local waitTime = 0
                     while waitTime < 2 and autoFarmEnabled do
@@ -422,26 +470,13 @@ local function startAutoFarm()
                 end
             end
 
-            -- Ожидание 45 секунд
+            -- Ожидание 45 секунд перед следующим циклом
             if autoFarmEnabled then
                 local waitTime = 0
                 while waitTime < 45 and autoFarmEnabled do
                     task.wait(1)
                     waitTime += 1
                 end
-            end
-
-            -- Принудительный ресет
-            if autoFarmEnabled then
-                local currentCharacter = player.Character
-                if currentCharacter and currentCharacter.Parent then
-                    currentCharacter:BreakJoints()
-                end
-            end
-
-            -- Ожидание возрождения (цикл с проверкой флага)
-            while autoFarmEnabled and not player.Character do
-                task.wait(0.5)
             end
         end
     end)
@@ -450,7 +485,6 @@ end
 
 local function stopAutoFarm()
     autoFarmEnabled = false
-    -- Не закрываем корутину, она завершится сама
     local character = player.Character
     if character then
         unfreezeCharacter(character)
@@ -460,7 +494,7 @@ end
 local autoFarmFeature = CreateFeatureRow(
     scrollingFrame,
     "Auto Farm",
-    "Teleports through all CaveStage DarknessParts, waits 2s at each, then waits 45s and resets character.",
+    "Teleports through CaveStage DarknessParts (frozen), unfreezes at GoldenChest, waits 45s, repeats.",
     false,
     function(value)
         if value then
@@ -471,36 +505,20 @@ local autoFarmFeature = CreateFeatureRow(
     end
 )
 
--- Кнопка DestroyGUI
-local destroyButton = Instance.new("TextButton")
-destroyButton.Name = "DestroyGUI"
-destroyButton.Size = UDim2.new(1, -20, 0, 30)
-destroyButton.Position = UDim2.new(0, 10, 1, -40)
-destroyButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-destroyButton.BorderSizePixel = 0
-destroyButton.Text = "DestroyGUI"
-destroyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-destroyButton.Font = Enum.Font.GothamBold
-destroyButton.TextSize = 14
-destroyButton.Parent = mainFrame
-
-local guiVisible = true
-local inputConnection
-
-inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        guiVisible = not guiVisible
-        screenGui.Enabled = guiVisible
-    end
+-- Обработчики кнопок интерфейса
+btnMinimize.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    floatingButton.Visible = true
 end)
 
-destroyButton.MouseButton1Click:Connect(function()
+floatingButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    floatingButton.Visible = false
+end)
+
+btnClose.MouseButton1Click:Connect(function()
     stopAutoFarm()
     stopFly()
-    if inputConnection then
-        inputConnection:Disconnect()
-    end
     screenGui:Destroy()
 end)
 
