@@ -480,10 +480,7 @@ local function startAutoFarm()
             for i, target in ipairs(teleportTargets) do
                 if not autoFarmEnabled then break end
                 if target and target:IsA("BasePart") then
-                    -- Если это последняя точка (сундук), размораживаем персонажа
-                    if i == #teleportTargets then
-                        unfreezeCharacter(character)
-                    end
+                    -- Телепортируемся, оставляя персонажа замороженным (даже на сундуке)
                     rootPart.CFrame = target.CFrame * CFrame.new(0, 3, 0)
                 end
                 -- Ждём 2 секунды на каждой точке, кроме последней
@@ -528,7 +525,7 @@ end
 local autoFarmFeature = CreateFeatureRow(
     scrollingFrame,
     "Auto Farm",
-    "Teleports through CaveStage DarknessParts (frozen), unfreezes at GoldenChest, restarts if on SpawnLocation.",
+    "Teleports through CaveStage DarknessParts (frozen), stays frozen at GoldenChest to avoid death. Restarts if on SpawnLocation.",
     false,
     function(value)
         if value then
