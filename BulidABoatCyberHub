@@ -1,5 +1,4 @@
 -- LocalScript: Поместите в StarterGui (рекомендуется) или StarterPlayerScripts
--- Если в StarterPlayerScripts, скрипт автоматически поместит GUI в PlayerGui
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -21,7 +20,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Enabled = true
 screenGui.Parent = playerGui
 
--- Основной фрейм (тёмно-серый, острые углы)
+-- Основной фрейм
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 300, 0, 400)
@@ -31,7 +30,7 @@ mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Parent = screenGui
 
--- Верхняя панель (для перетаскивания)
+-- Верхняя панель (перетаскивание)
 local topBar = Instance.new("Frame")
 topBar.Name = "TopBar"
 topBar.Size = UDim2.new(1, 0, 0, 30)
@@ -52,7 +51,7 @@ titleLabel.TextSize = 16
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = topBar
 
--- Перетаскивание всей панели за верхнюю панель
+-- Перетаскивание
 local dragSupported = pcall(function()
     local dragDetector = Instance.new("UIDragDetector")
     dragDetector.ResponseStyle = Enum.ResponseStyle.Drag
@@ -61,7 +60,6 @@ local dragSupported = pcall(function()
 end)
 
 if not dragSupported then
-    -- Ручное перетаскивание через мышь
     local dragging = false
     local dragOffset = Vector2.new(0, 0)
 
@@ -87,7 +85,7 @@ if not dragSupported then
     end)
 end
 
--- Контейнер для функций (прокручиваемый список)
+-- Контейнер функций
 local featureContainer = Instance.new("Frame")
 featureContainer.Name = "FeatureContainer"
 featureContainer.Size = UDim2.new(1, 0, 1, -60)
@@ -115,10 +113,10 @@ uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 uiListLayout.Padding = UDim.new(0, 10)
 uiListLayout.Parent = scrollingFrame
 
--- ==================== РЕЕСТР ВСЕХ ФУНКЦИЙ ====================
+-- Реестр функций
 local allFeatures = {}
 
--- Функция создания строки функции
+-- Создание строки функции
 local function CreateFeatureRow(parent, name, description, initialValue, onToggle)
     local row = Instance.new("Frame")
     row.Name = name
@@ -218,7 +216,7 @@ local function CreateFeatureRow(parent, name, description, initialValue, onToggl
     return featureObj
 end
 
--- Пример функции (для теста)
+-- Тестовая функция
 local testFeature = CreateFeatureRow(
     scrollingFrame,
     "Test Function",
@@ -233,21 +231,18 @@ local testFeature = CreateFeatureRow(
     end
 )
 
--- ==================== ПОЛЁТ (FLY) ====================
+-- Полёт
 local flyEnabled = false
 local flyVelocity = nil
 local flyGyro = nil
 local flyHeartbeat = nil
-
 local FLY_SPEED = 50
 
 local function startFly()
-    -- Если полёт уже активен и объекты живы, ничего не делаем
     if flyEnabled and flyVelocity and flyGyro and flyVelocity.Parent and flyGyro.Parent then
         return
     end
 
-    -- Очищаем предыдущее состояние (на случай, если персонаж умер)
     stopFly()
 
     local character = player.Character
@@ -343,22 +338,20 @@ local flyFeature = CreateFeatureRow(
     end
 )
 
--- ==================== ЗАМОРОЗКА ПЕРСОНАЖА ====================
+-- Заморозка персонажа
 local function freezeCharacter(character)
     if not character then return end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoid or not rootPart then return end
 
-    -- Останавливаем текущий полёт, если он активен
     stopFly()
 
-    -- Замораживаем: запрещаем движение, прыжки, падение
     humanoid.PlatformStand = true
     humanoid.WalkSpeed = 0
     humanoid.JumpPower = 0
     humanoid.AutoRotate = false
-    rootPart.Anchored = true  -- Гарантированно предотвращает падение
+    rootPart.Anchored = true
 end
 
 local function unfreezeCharacter(character)
@@ -367,17 +360,16 @@ local function unfreezeCharacter(character)
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoid then return end
 
-    -- Возвращаем стандартные значения (можно подстроить под игру)
     humanoid.PlatformStand = false
-    humanoid.WalkSpeed = 16 -- Стандартная скорость ходьбы (можно изменить)
-    humanoid.JumpPower = 50 -- Стандартная сила прыжка (можно изменить)
+    humanoid.WalkSpeed = 16
+    humanoid.JumpPower = 50
     humanoid.AutoRotate = true
     if rootPart then
         rootPart.Anchored = false
     end
 end
 
--- ==================== АВТОФАРМ ====================
+-- Автофарм
 local autoFarmEnabled = false
 local autoFarmCoroutine = nil
 
@@ -397,7 +389,6 @@ local teleportTargets = {
 
 local function startAutoFarm()
     if autoFarmCoroutine and coroutine.status(autoFarmCoroutine) ~= "dead" then
-        -- Если корутина уже работает, просто ставим флаг и выходим
         autoFarmEnabled = true
         return
     end
@@ -405,27 +396,23 @@ local function startAutoFarm()
     autoFarmEnabled = true
     autoFarmCoroutine = coroutine.create(function()
         while autoFarmEnabled do
-            -- Ждём появления персонажа
-            local character = player.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then
-                player.CharacterAdded:Wait()
-                character = player.Character
-                if not character then continue end
+            -- Ожидание персонажа с проверкой флага
+            while autoFarmEnabled and not player.Character do
+                task.wait(0.5)
             end
+            if not autoFarmEnabled then break end
 
+            local character = player.Character
             local humanoid = character:WaitForChild("Humanoid")
             local rootPart = character:WaitForChild("HumanoidRootPart")
 
-            -- Замораживаем персонажа (отключаем полёт и движение, предотвращаем падение)
             freezeCharacter(character)
 
-            -- Телепортируемся по всем целям
             for i, target in ipairs(teleportTargets) do
                 if not autoFarmEnabled then break end
                 if target and target:IsA("BasePart") then
                     rootPart.CFrame = target.CFrame * CFrame.new(0, 3, 0)
                 end
-                -- Ждём 2 секунды на каждой точке, кроме последней
                 if i < #teleportTargets then
                     local waitTime = 0
                     while waitTime < 2 and autoFarmEnabled do
@@ -435,7 +422,7 @@ local function startAutoFarm()
                 end
             end
 
-            -- Ожидание 45 секунд перед следующим циклом
+            -- Ожидание 45 секунд
             if autoFarmEnabled then
                 local waitTime = 0
                 while waitTime < 45 and autoFarmEnabled do
@@ -444,9 +431,17 @@ local function startAutoFarm()
                 end
             end
 
-            -- Размораживаем перед возможным повторным циклом (если не выключен)
+            -- Принудительный ресет
             if autoFarmEnabled then
-                unfreezeCharacter(character)
+                local currentCharacter = player.Character
+                if currentCharacter and currentCharacter.Parent then
+                    currentCharacter:BreakJoints()
+                end
+            end
+
+            -- Ожидание возрождения (цикл с проверкой флага)
+            while autoFarmEnabled and not player.Character do
+                task.wait(0.5)
             end
         end
     end)
@@ -455,12 +450,7 @@ end
 
 local function stopAutoFarm()
     autoFarmEnabled = false
-    if autoFarmCoroutine then
-        coroutine.close(autoFarmCoroutine)
-        autoFarmCoroutine = nil
-    end
-
-    -- Размораживаем текущего персонажа, если он есть
+    -- Не закрываем корутину, она завершится сама
     local character = player.Character
     if character then
         unfreezeCharacter(character)
@@ -470,7 +460,7 @@ end
 local autoFarmFeature = CreateFeatureRow(
     scrollingFrame,
     "Auto Farm",
-    "Teleports through all CaveStage DarknessParts, waits 2s at each, then waits 45s and repeats. Restarts after death.",
+    "Teleports through all CaveStage DarknessParts, waits 2s at each, then waits 45s and resets character.",
     false,
     function(value)
         if value then
@@ -481,7 +471,7 @@ local autoFarmFeature = CreateFeatureRow(
     end
 )
 
--- ==================== КНОПКА DESTROY ====================
+-- Кнопка DestroyGUI
 local destroyButton = Instance.new("TextButton")
 destroyButton.Name = "DestroyGUI"
 destroyButton.Size = UDim2.new(1, -20, 0, 30)
@@ -494,7 +484,6 @@ destroyButton.Font = Enum.Font.GothamBold
 destroyButton.TextSize = 14
 destroyButton.Parent = mainFrame
 
--- Переключение видимости по клавише Insert
 local guiVisible = true
 local inputConnection
 
@@ -507,15 +496,15 @@ inputConnection = UserInputService.InputBegan:Connect(function(input, gameProces
 end)
 
 destroyButton.MouseButton1Click:Connect(function()
-    stopAutoFarm() -- Разморозит персонажа
-    stopFly()      -- Остановит полёт, если он был активен
+    stopAutoFarm()
+    stopFly()
     if inputConnection then
         inputConnection:Disconnect()
     end
     screenGui:Destroy()
 end)
 
--- ==================== АВТОВОССТАНОВЛЕНИЕ ПОСЛЕ СМЕРТИ ====================
+-- Автовосстановление после смерти
 player.CharacterAdded:Connect(function(char)
     task.wait(0.2)
     for _, feature in ipairs(allFeatures) do
@@ -525,7 +514,7 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- ==================== ТАЙМЕР ПЕРЕЗАПУСКА КАЖДЫЕ 45 СЕКУНД ====================
+-- Таймер перезапуска каждые 45 секунд
 task.spawn(function()
     while true do
         task.wait(45)
