@@ -410,6 +410,30 @@ local function unfreezeCharacter(character)
     end
 end
 
+-- Поиск всех SpawnLocation
+local spawnLocations = {}
+local function updateSpawnLocations()
+    spawnLocations = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == "SpawnLocation" then
+            table.insert(spawnLocations, obj)
+        end
+    end
+end
+updateSpawnLocations()
+
+-- Функция проверки, стоит ли персонаж на SpawnLocation
+local function isOnSpawnLocation(character)
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return false end
+    for _, spawnPart in ipairs(spawnLocations) do
+        if (rootPart.Position - spawnPart.Position).Magnitude <= 10 then
+            return true
+        end
+    end
+    return false
+end
+
 -- Автофарм
 local autoFarmEnabled = false
 local autoFarmCoroutine = nil
@@ -447,6 +471,8 @@ local function startAutoFarm()
             local humanoid = character:WaitForChild("Humanoid")
             local rootPart = character:WaitForChild("HumanoidRootPart")
 
+            local shouldRestart = false
+
             -- Замораживаем персонажа перед телепортациями
             freezeCharacter(character)
 
@@ -466,16 +492,24 @@ local function startAutoFarm()
                     while waitTime < 2 and autoFarmEnabled do
                         task.wait(0.1)
                         waitTime += 0.1
+                        if isOnSpawnLocation(character) then
+                            shouldRestart = true
+                            break
+                        end
                     end
+                    if shouldRestart then break end
                 end
             end
 
             -- Ожидание 45 секунд перед следующим циклом
-            if autoFarmEnabled then
+            if autoFarmEnabled and not shouldRestart then
                 local waitTime = 0
                 while waitTime < 45 and autoFarmEnabled do
                     task.wait(1)
                     waitTime += 1
+                    if isOnSpawnLocation(character) then
+                        break
+                    end
                 end
             end
         end
@@ -494,7 +528,7 @@ end
 local autoFarmFeature = CreateFeatureRow(
     scrollingFrame,
     "Auto Farm",
-    "Teleports through CaveStage DarknessParts (frozen), unfreezes at GoldenChest, waits 45s, repeats.",
+    "Teleports through CaveStage DarknessParts (frozen), unfreezes at GoldenChest, restarts if on SpawnLocation.",
     false,
     function(value)
         if value then
