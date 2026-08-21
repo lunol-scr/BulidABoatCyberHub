@@ -31,7 +31,7 @@ mainFrame.Active = true
 mainFrame.Visible = true
 mainFrame.Parent = screenGui
 
--- Верхняя панель (перетаскивание)
+-- Верхняя панель
 local topBar = Instance.new("Frame")
 topBar.Name = "TopBar"
 topBar.Size = UDim2.new(1, 0, 0, 30)
@@ -43,7 +43,7 @@ topBar.Parent = mainFrame
 -- Заголовок (слева)
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -70, 1, 0) -- оставляем место под кнопки справа
+titleLabel.Size = UDim2.new(1, -70, 1, 0)
 titleLabel.Position = UDim2.new(0, 5, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "BulidABoatCyberHub"
@@ -53,7 +53,7 @@ titleLabel.TextSize = 16
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = topBar
 
--- Перетаскивание за верхнюю панель (только за пустую область)
+-- Перетаскивание за верхнюю панель
 local dragSupported = pcall(function()
     local dragDetector = Instance.new("UIDragDetector")
     dragDetector.ResponseStyle = Enum.ResponseStyle.Drag
@@ -91,7 +91,7 @@ end
 local btnMinimize = Instance.new("TextButton")
 btnMinimize.Name = "MinimizeButton"
 btnMinimize.Size = UDim2.new(0, 30, 0, 30)
-btnMinimize.Position = UDim2.new(1, -70, 0, 0) -- справа, левее крестика
+btnMinimize.Position = UDim2.new(1, -70, 0, 0)
 btnMinimize.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 btnMinimize.BorderSizePixel = 0
 btnMinimize.Text = "-"
@@ -104,7 +104,7 @@ btnMinimize.Parent = mainFrame
 local btnClose = Instance.new("TextButton")
 btnClose.Name = "CloseButton"
 btnClose.Size = UDim2.new(0, 30, 0, 30)
-btnClose.Position = UDim2.new(1, -35, 0, 0) -- правый верхний угол
+btnClose.Position = UDim2.new(1, -35, 0, 0)
 btnClose.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 btnClose.BorderSizePixel = 0
 btnClose.Text = "X"
@@ -117,7 +117,7 @@ btnClose.Parent = mainFrame
 local floatingButton = Instance.new("TextButton")
 floatingButton.Name = "FloatingButton"
 floatingButton.Size = UDim2.new(0, 200, 0, 40)
-floatingButton.Position = UDim2.new(0.5, -100, 0, 10) -- сверху по центру
+floatingButton.Position = UDim2.new(0.5, -100, 0, 10)
 floatingButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 floatingButton.BorderSizePixel = 0
 floatingButton.Text = "BulidABoatCyberHub"
